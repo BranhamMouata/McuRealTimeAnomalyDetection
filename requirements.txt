@@ -1,0 +1,10 @@
+pillow
+numpy
+kagglehub
+scikit-learn
+matplotlib
+joblib
+kagglehub
+numpy
+scikit-learn
+tensorflow[and-cuda]
