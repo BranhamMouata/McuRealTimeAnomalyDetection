@@ -7,6 +7,7 @@
 #include "error_threshold.h"
 #include <array>
 #include <string>
+#include "features_extraction.h"
 
 #define LED_PIN GPIO_PIN_5
 #define LED_GPIO_PORT GPIOA
