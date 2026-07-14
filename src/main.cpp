@@ -5,15 +5,17 @@
 #include "model_interpreter.h"
 #include "scaler.h"
 #include "error_threshold.h"
+#include "sensor_source.h"
 #include <array>
-#include <string>
 #include "features_extraction.h"
+#include "sensor_source_data.h"
 
 #define LED_PIN GPIO_PIN_5
 #define LED_GPIO_PORT GPIOA
 #define LED_GPIO_CLK_ENABLE() __HAL_RCC_GPIOA_CLK_ENABLE()
 
-constexpr uint8_t kSensorDataSize = kScalerFeatureCount;
+// Raw floating point signal
+static std::array<float, kSensorRawSampleCount> raw_signal{};
 
 static void init_led_gpio()
 {
@@ -32,26 +34,36 @@ static void init_led_gpio()
 int main(void)
 {
   HAL_Init();
-
   init_led_gpio();
-  // get the interpreter
+  // LiteRT model interpreter
   auto *interpreter = get_model_interpreter();
-  // Retrieve sensor data
-  std::array<float, kSensorDataSize> sensor_data{};
-  sensor_data.fill(1.F);
-
-  // fill model input buffer
-  auto *model_input_buffer = interpreter->input(0)->data.int8;
-  const auto zero_point = interpreter->input(0)->params.zero_point;
-  const auto scale = interpreter->input(0)->params.scale;
-  fill_model_buffer<kSensorDataSize>(model_input_buffer, sensor_data, kScalerMean, kScalerStd, zero_point, scale);
+  auto *model_input_tensor = interpreter->input(0);
+  auto *model_input_buffer = model_input_tensor->data.int8;
+  auto *model_output_tensor = interpreter->output(0);
+  const auto input_zero_point = model_input_tensor->params.zero_point;
+  const auto input_scale = model_input_tensor->params.scale;
 
   while (1)
   {
-    HAL_GPIO_TogglePin(LED_GPIO_PORT, LED_PIN);
-    // Perform inference
+    // Get sensor int16 signal
+    sensor_source_next_frame(sensor_buffer);
+    // Convet int16 signal to floating point
+    for (size_t idx = 0; idx < sensor_buffer.size(); ++idx)
+    {
+      raw_signal[idx] = static_cast<float>(sensor_buffer[idx]) / kSensorI16Scale;
+    }
+    // Extract features (mean, var, rms, kurtosis, crest factor, impulse factor, peak to peak, skewness, energy)
+    auto features = extract_features<kSensorRawSampleCount>(raw_signal);
+    // Standardize the features to fill in the model
+    standardize_features(reinterpret_cast<float *>(&features));
+    fill_model_buffer<kScalerFeatureCount>(model_input_buffer, reinterpret_cast<const float *>(&features),
+                                           input_zero_point, input_scale);
+    // Peform inference
     interpreter->Invoke();
-    HAL_Delay(1000);
+    // Compute the reconstruction error
+    const float reconstruction_error = compute_reconstruction_error(reinterpret_cast<const float *>(&features), model_output_tensor);
+    const GPIO_PinState led_state = (reconstruction_error >= kErrorThreshold) ? GPIO_PIN_SET : GPIO_PIN_RESET;
+    HAL_GPIO_WritePin(LED_GPIO_PORT, LED_PIN, led_state);
   }
 }
 
