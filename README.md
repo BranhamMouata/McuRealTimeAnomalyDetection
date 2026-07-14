@@ -3,6 +3,7 @@
 Real-time bearing anomaly detection on STM32F4 using TensorFlow Lite for Microcontrollers (TFLM).
 
 This project trains an autoencoder on CWRU vibration data, quantizes it to full int8 LiteRT/TFLite, converts model artifacts to C headers, and runs anomaly detection on a STM32F407 Discovery board.
+![Inference on device](/img/stm32f4_litert.jpg)
 
 ## Purpose
 
