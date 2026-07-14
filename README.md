@@ -77,7 +77,7 @@ This pipeline does:
 - model evaluation
 - model header export (`scripts/convert_model_to_carray.sh`)
 
-Export scaler and threshold headers (if needed separately):
+Export scaler and threshold headers :
 
 ```bash
 ./scripts/convert_scaler_to_carray.sh
@@ -87,8 +87,7 @@ Export scaler and threshold headers (if needed separately):
 Generate sensor source C files from dataset signals:
 
 ```bash
-source mcu_anomaly_env/bin/activate
-python python/convert_sensor_source_to_c.py
+./scripts/convert_sensor_source_to_c.sh
 ```
 
 ### 2) Build and Flash Firmware
