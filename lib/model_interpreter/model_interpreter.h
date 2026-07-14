@@ -8,25 +8,18 @@
 #include "tensorflow/lite/micro/micro_interpreter.h"
 
 template <int N>
-void fill_model_buffer(int8_t *i_inputs, const std::array<float, N> &f_inputs,
-                       const float *standard_scaler_mean,
-                       const float *standard_scaler_std,
+void fill_model_buffer(int8_t *i_inputs, const float *f_inputs,
                        int8_t qzero_point, float qscale)
 {
   if (i_inputs == nullptr ||
-      standard_scaler_mean == nullptr ||
-      standard_scaler_std == nullptr ||
       qscale <= 0.F)
   {
     return;
   }
 
-  for (size_t idx = 0; idx < f_inputs.size(); idx++)
+  for (size_t idx = 0; idx < N; idx++)
   {
-    const float std = standard_scaler_std[idx];
-    const float standardized =
-        (std != 0.F) ? ((f_inputs[idx] - standard_scaler_mean[idx]) / std) : 0.F;
-    const float quantized_f = std::nearbyint(standardized / qscale) +
+    const float quantized_f = std::nearbyint(f_inputs[idx] / qscale) +
                               static_cast<float>(qzero_point);
     constexpr int32_t kMinQ = static_cast<int32_t>(INT8_MIN);
     constexpr int32_t kMaxQ = static_cast<int32_t>(INT8_MAX);
@@ -36,5 +29,11 @@ void fill_model_buffer(int8_t *i_inputs, const std::array<float, N> &f_inputs,
     i_inputs[idx] = static_cast<int8_t>(quantized_i32);
   }
 }
+
+void standardize_features(float *features);
+
+float compute_reconstruction_error(
+    const float *standardized_features,
+    TfLiteTensor *output_tensor);
 
 tflite::MicroInterpreter *get_model_interpreter();
