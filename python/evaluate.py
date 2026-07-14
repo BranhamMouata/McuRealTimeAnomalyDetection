@@ -32,9 +32,10 @@ def evaluate_keras_model(model_path, normal_features, defect_features, threshold
 
 def litert_infer(input_data, interpreter, input_details, output_details, input_scale,
                  input_zero_point, output_scale, output_zero_point):
-    input_data = input_data / input_scale + input_zero_point
+    quantized = np.rint(input_data / input_scale + input_zero_point)
+    quantized = np.clip(quantized, -128, 127).astype(np.int8)
     input_data = np.expand_dims(
-        input_data, axis=0).astype(input_details["dtype"])
+        quantized, axis=0).astype(input_details["dtype"])
     interpreter.set_tensor(input_details["index"], input_data)
     interpreter.invoke()
     output_data = interpreter.get_tensor(output_details["index"])[0]
