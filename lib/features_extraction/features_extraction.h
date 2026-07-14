@@ -78,7 +78,7 @@ Features extract_features(const std::array<float, DATA_SIZE> &raw_data)
     // compute root mean square
     features.rms = std::sqrt(sum_raw_sq / raw_data.size());
     // compute kurtosis
-    features.ku = (features.var > 0.F) ? sum_qu / (features.var * features.var) : 0.F;
+    features.ku = (features.var > 0.F) ? sum_qu / (features.var * features.var * raw_data.size()) : 0.F;
     // compute crest factor
     features.cf = (features.rms > 0.F) ? max_abs / features.rms : 0.F;
     // compute impulse factor
@@ -87,7 +87,7 @@ Features extract_features(const std::array<float, DATA_SIZE> &raw_data)
     // compute peak to peak
     features.p2p = max_value - min_value;
     // compute skewness
-    features.sw = (features.var > 0.F) ? sum_cu / (std::sqrt(features.var) * features.var) : 0.F;
+    features.sw = (features.var > 0.F) ? sum_cu / (std::sqrt(features.var) * features.var * raw_data.size()) : 0.F;
     // compute energy
     const float mean_sqrt = sum_sqrt / raw_data.size();
     features.en = mean_sqrt * mean_sqrt;
