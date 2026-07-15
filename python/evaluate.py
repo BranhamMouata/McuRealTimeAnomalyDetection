@@ -10,6 +10,26 @@ from model import reconstruction_errors
 import tensorflow as tf
 
 
+def model_performance(normal_loss, defect_loss):
+    gt_defect_labels = np.concatenate((np.zeros(
+        (normal_features.shape[0])), np.ones((normal_features.shape[0]))), axis=0).flatten()
+
+    defect_detection = (np.concatenate(
+        (normal_loss, defect_loss), axis=0) >= threshold).astype(np.int8).flatten()
+    # Accuracy
+    accuracy = np.mean((defect_detection ==
+                       gt_defect_labels).astype(np.int8))
+    # Confusion parameters
+    tp = sum((defect_detection == 1) & (gt_defect_labels == 1))
+    fp = sum((defect_detection == 1) & (gt_defect_labels == 0))
+    fn = sum((defect_detection == 0) & (gt_defect_labels == 1))
+    # Recall
+    recall = tp/(tp + fn)
+    # Precision
+    precision = tp/(tp + fp)
+    return accuracy, recall, precision
+
+
 def evaluate_keras_model(model_path, normal_features, defect_features, threshold):
     # Load the Keras model
     model = load_model(model_path)
@@ -18,16 +38,8 @@ def evaluate_keras_model(model_path, normal_features, defect_features, threshold
     # evaluate the model on the defect features
     defect_loss = reconstruction_errors(model, defect_features)
 
-    # classify the normal features
-    normal_predictions = (normal_loss < threshold).astype(int)
-    # classify the defect features
-    defect_predictions = (defect_loss >= threshold).astype(int)
-
-    # compute the accuracy of the normal features
-    normal_accuracy = np.mean(normal_predictions)
-    # compute the accuracy of the defect features
-    defect_accuracy = np.mean(defect_predictions)
-    return normal_accuracy, defect_accuracy
+    # Model performance
+    return model_performance(normal_loss, defect_loss)
 
 
 def litert_infer(input_data, interpreter, input_details, output_details, input_scale,
@@ -73,9 +85,8 @@ def evaluate_litert_model(model_path, normal_features, defect_features, threshol
                                    input_zero_point, output_scale, output_zero_point)
         defect_loss[idx] = np.mean(
             np.square(input_data.astype(np.float32) - output_data))
-    normal_accuracy = np.mean(normal_loss < threshold)
-    defect_accuracy = np.mean(defect_loss >= threshold)
-    return normal_accuracy, defect_accuracy
+    # Model performance
+    return model_performance(normal_loss, defect_loss)
 
 
 if __name__ == "__main__":
@@ -115,17 +126,17 @@ if __name__ == "__main__":
     threshold = joblib.load(os.path.join(
         str(PROJECT_ROOT), "model", "error_threshold.pkl"))
 
-    # evaluate the keras model on the normal features
-    keras_normal_accuracy, keras_defect_accuracy = evaluate_keras_model(
+    # evaluate the keras model
+    k_accuracy, k_recall, k_precision = evaluate_keras_model(
         keras_model_path, normal_features, defect_features, threshold)
-    # evaluate the litert model on the normal features
+    # evaluate the litert model
     litert_model_path = os.path.join(
         str(PROJECT_ROOT), "model", "cwru_autoencoder_quant8.tflite")
-    litert_normal_accuracy, litert_defect_accuracy = evaluate_litert_model(
+    lt_accuracy, lt_recall, lt_precision = evaluate_litert_model(
         litert_model_path, normal_features, defect_features, threshold)
     print("Keras model evaluation: ")
-    print("Normal accuracy: ", keras_normal_accuracy)
-    print("Defect accuracy: ", keras_defect_accuracy)
+    print(" Keras model [accuracy, recall, precision] : [{}, {}, {}]".format(
+          k_accuracy, k_recall, k_precision))
     print("LiteRT model evaluation: ")
-    print("Normal accuracy: ", litert_normal_accuracy)
-    print("Defect accuracy: ", litert_defect_accuracy)
+    print(" LiteRT model [accuracy, recall, precision] : [{}, {}, {}]".format(
+          lt_accuracy, lt_recall, lt_precision))
