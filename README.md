@@ -114,7 +114,7 @@ Measured with `pio run` on `disco_f407vg` (STM32F407VGT6):
 
 ### Model Runtime Characteristics
 
-- Frame rate: TBD
+- Frame rate: 117 frames/s
 - Input window size: 1024 samples (`kSensorRawSampleCount`)
 - Sampling rate: 48,000 Hz (`kSensorSampleRateHz`)
 - Tensor arena size: 3000 bytes (`kTensorArenaSize`)
