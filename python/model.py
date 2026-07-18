@@ -107,3 +107,20 @@ def choose_threshold(errors: np.ndarray, factor: float = 3.0) -> float:
     mu = float(np.mean(errors))
     sigma = float(np.std(errors))
     return mu + factor * sigma
+
+
+if __name__ == "__main__":
+    import os
+    from paths import PROJECT_ROOT
+    from tensorflow.keras.models import load_model
+
+    # load the model
+    keras_model_path = os.path.join(
+        str(PROJECT_ROOT), "model", "cwru_autoencoder.h5")
+    # Check if the model exists
+    if not os.path.exists(keras_model_path):
+        print(
+            f"Model file {keras_model_path} does not exist. Please train the model first.")
+        exit(1)
+    model = load_model(keras_model_path)
+    model.summary()
