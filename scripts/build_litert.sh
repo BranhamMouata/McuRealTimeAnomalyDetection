@@ -6,6 +6,12 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 REPO_ROOT="$( cd "${SCRIPT_DIR}/.." && pwd )"
 TFLM_DIR="${REPO_ROOT}/tflite-micro"
 OUT_DIR="${REPO_ROOT}/lib/static_lib"
+TARGET_ARCH="cortex-m4+fp"
+
+# Prefer project venv Python so TFLM helper scripts (numpy, etc.) resolve reliably.
+if [[ -x "${REPO_ROOT}/mcu_anomaly_env/bin/python3" ]]; then
+	export PATH="${REPO_ROOT}/mcu_anomaly_env/bin:${PATH}"
+fi
 
 if [[ ! -f "${TFLM_DIR}/tensorflow/lite/micro/tools/make/Makefile" ]]; then
 	echo "Error: tflite-micro directory not found or incomplete at ${TFLM_DIR}" >&2
@@ -16,12 +22,12 @@ cd "${TFLM_DIR}"
 
 make -j8 -f tensorflow/lite/micro/tools/make/Makefile \
 TARGET=cortex_m_generic \
-TARGET_ARCH=cortex-m4 \
+TARGET_ARCH="${TARGET_ARCH}" \
 OPTIMIZED_KERNEL_DIR=cmsis_nn \
 LDFLAGS="--specs=nosys.specs" \
 microlite
 
-LIB_DIR="${TFLM_DIR}/gen/cortex_m_generic_cortex-m4_default_cmsis_nn_gcc/lib"
+LIB_DIR="${TFLM_DIR}/gen/cortex_m_generic_${TARGET_ARCH}_default_cmsis_nn_gcc/lib"
 if [[ ! -d "${LIB_DIR}" ]]; then
 	echo "Error: expected library output directory not found: ${LIB_DIR}" >&2
 	exit 1
