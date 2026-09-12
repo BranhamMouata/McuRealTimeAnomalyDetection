@@ -46,7 +46,8 @@ int main(void)
   const auto input_zero_point = model_input_tensor->params.zero_point;
   const auto input_scale = model_input_tensor->params.scale;
 #ifdef INFER_FRAMES_RATE
-  std::array<float, 10> infer_latence{};
+  constexpr uint8_t max_infer_count = 10;
+  float infer_latence{};
   uint8_t infer_count = 0;
   float frame_rate = 0;
   usart_serial_init();
@@ -58,7 +59,7 @@ int main(void)
     sensor_source_next_frame(sensor_buffer);
 #ifdef INFER_FRAMES_RATE
     uint32_t tickstart{};
-    if (infer_count < infer_latence.size())
+    if (infer_count < max_infer_count)
     {
       tickstart = HAL_GetTick();
     }
@@ -79,13 +80,14 @@ int main(void)
     // Compute the reconstruction error
     const float reconstruction_error = compute_reconstruction_error(reinterpret_cast<const float *>(&features), model_output_tensor);
 #ifdef INFER_FRAMES_RATE
-    if (infer_count < infer_latence.size())
+    if (infer_count < max_infer_count)
     {
-      infer_latence[infer_count++] = HAL_GetTick() - tickstart;
+      infer_latence += HAL_GetTick() - tickstart;
+      infer_count++;
     }
     else if (frame_rate == 0)
     {
-      frame_rate = (infer_latence.size() * 1000) / std::accumulate(infer_latence.cbegin(), infer_latence.cend(), 0);
+      frame_rate = (max_infer_count * 1000) / infer_latence;
     }
     else
     {
